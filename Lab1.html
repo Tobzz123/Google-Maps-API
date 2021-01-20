@@ -1,0 +1,308 @@
+
+<!DOCTYPE html>
+<html>
+    <body>
+	    <script type="text/javascript" src="education.js"></script>
+		
+		<button onclick="clearDirections()">Clear</button>
+		<div id='filters' 
+		     style='float:left; height:100px;'>
+		  <button onclick="filterpins('all')">All</button> <br />
+		  <button onclick="filterpins('Elementary School')">Elementary</button> <br />
+		  <button onclick="filterpins('Middle School')">Middle</button> <br /> 
+		  <button onclick="filterpins('Secondary School')">Secondary</button> <br />
+		  <button onclick="filterpins('Post Secondary')">Post-secondary</button> <br />
+		  <button onclick="filterpins('Alternative Education')">Alternative</button> <br />
+		  <button onclick="filterpins('Adult Learning')">Adult</button> <br />
+		  <button onclick="filterpins('Section 23 Program')">Section 23</button> <br />
+		  <label for ="selectpath"> Select path </label>
+		  <input type = "checkbox" id ="selectpath" value = "path">
+		</div> 
+        <div id='myMap' 
+		     style='width: 500px; height: 500px; float:left;'>
+	    </div>
+		<div id='directionsItinerary' 
+		     style='float:left; width:400px; height:500px;overflow-y: scroll;'>
+		</div> 
+		
+		<form id="newpin">
+		  Name: <input type="text" id="name">
+		  Address: <input type="text" id="address">
+		  <input type="submit">
+		</form>
+		
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+		<script type='text/javascript' src='https://www.bing.com/api/maps/mapcontrol?key=Ag-9UmaOu3hCq2d2bxFTnt2ryCnUmD81o8_dEMuHCqbAFJ0TMwiY1IuhzPUjRaC6&callback=loadMapScenario' async defer></script>
+        <script type='text/javascript'>
+		
+		  var map;
+          var directionsManager;
+		  var lat;
+		  var lng;
+		  var searchManager;
+		  var selectedLocations = [];
+		  
+		  $(document).ready( function() 
+		  {
+		  
+		    $("#newpin").submit(function()
+			{
+			   geocodeQuery($("#address").val(), $("#name").val());
+			});
+			
+			return false;
+		  
+		  });
+ 
+ 
+     function geocodeQuery(query,name) {
+        //If search manager is not defined, load the search module.
+        if (!searchManager) {
+            //Create an instance of the search manager and call the geocodeQuery function again.
+            Microsoft.Maps.loadModule('Microsoft.Maps.Search', function () {
+                searchManager = new Microsoft.Maps.Search.SearchManager(map);
+                geocodeQuery(query, name);
+            });
+        } else {
+            var searchRequest = {
+                where: query,
+                callback: function (r) {
+                    //Add the first result to the map and zoom into it.
+                    if (r && r.results && r.results.length > 0) {
+                        var pin = new Microsoft.Maps.Pushpin(r.results[0].location, {title: name});
+                        map.entities.push(pin);
+
+                      //  map.setView({ bounds: r.results[0].bestView });
+                    }
+                },
+                errorCallback: function (e) {
+                    //If there is an error, alert the user about it.
+                    alert("No results found.");
+                }
+            };
+
+            //Make the geocode request.
+            searchManager.geocode(searchRequest);
+        }
+    }
+
+		  // function that is called when Bing Maps finishes loading
+		  function loadMapScenario() {
+		  
+			// create a Map, centered in Hamilton
+			map = new Microsoft.Maps.Map(
+						document.getElementById('myMap'), 
+						{center: new Microsoft.Maps.Location(43.2557, -79.871) });
+			
+			navigator.geolocation.getCurrentPosition(function(position){
+
+		      lat = position.coords.latitude;
+			  lng = position.coords.longitude;
+		
+              addgeopin();
+			  
+            });	
+			
+			//Create an infobox at the center of the map but don't show it.
+            infobox = new Microsoft.Maps.Infobox(map.getCenter(), {
+              visible: false
+            });
+
+            //Assign the infobox to a map instance.
+            infobox.setMap(map);
+
+			for (i = 0; i < education.length; i++)
+			{
+
+			  var location = new Microsoft.Maps.Location(
+									education[i].LATITUDE,
+									education[i].LONGITUDE
+									);
+									
+			  // create a pushpin at this location, give it a label with 
+			  // the fire station name
+			  var pushpin = new Microsoft.Maps.Pushpin(
+							  location
+							  ,{} );
+							  
+			  //Store some metadata with the pushpin.
+              pushpin.metadata = {
+                description: 
+				  "<a href='" + education[i].WEBSITE + "' target='_blank'>" +
+				  education[i].NAME + "</a><br />" +
+				  education[i].ADDRESS + "<br />" +
+				  education[i].CATEGORY + "<br />" +
+				  education[i].COMMUNITY + "<br />" + 
+				  "<a href='#' onclick='return directions(" +
+				    education[i].LATITUDE + "," +
+				    education[i].LONGITUDE + ");" + "'>directions</a>"
+              };
+			
+			  Microsoft.Maps.Events.addHandler(pushpin, 'click', pushpinClicked);
+
+			  // add the pushpin to the map
+			  map.entities.push(pushpin);
+			}
+			
+	        //Load the directions module.
+            Microsoft.Maps.loadModule('Microsoft.Maps.Directions',    
+              function () {
+            
+			  //Create an instance of the directions manager.
+              directionsManager = 
+				new Microsoft.Maps.Directions.DirectionsManager(map);
+
+              }
+	        );			
+		  }
+		  
+		  function addgeopin()
+		  {
+		  	  
+			  var location = new Microsoft.Maps.Location(
+									lat,
+									lng
+									);
+									
+			  // create a pushpin at this location, give it a label with 
+			  // the fire station name
+			  var pushpin = new Microsoft.Maps.Pushpin(
+							  location
+							  ,{} );
+							  
+			  //Store some metadata with the pushpin.
+              pushpin.metadata = {
+                description: 
+				  lat + "," + lng
+
+              };
+			
+			  Microsoft.Maps.Events.addHandler(pushpin, 'click', pushpinClicked);
+
+			  // add the pushpin to the map
+			  map.entities.push(pushpin);
+			  
+		  }
+
+	      function pushpinClicked(e) {
+		    //Make sure the infobox has metadata to display.
+			if (e.target.metadata) {
+			//Set the infobox options with the metadata of the pushpin.
+			infobox.setOptions({
+			  location: e.target.getLocation(),
+			  description: e.target.metadata.description,
+			  visible: true
+			});
+			}
+		  }
+		  
+		  function filterpins(filterstr)
+		  {
+
+
+             clearDirections();
+
+
+             infobox.setOptions({
+			  visible: false
+			});
+			
+           for (var i = map.entities.getLength() - 1; i >= 0; i--) {
+              var pushpin = map.entities.get(i);
+              if (pushpin instanceof Microsoft.Maps.Pushpin) {
+                map.entities.removeAt(i);
+            }
+           }
+
+              addgeopin();
+	
+			for (i = 0; i < education.length; i++)
+			{
+
+              if (filterstr == education[i].CATEGORY || filterstr == "all")
+			  {
+			    var location = new Microsoft.Maps.Location(
+				  					education[i].LATITUDE,
+					  				education[i].LONGITUDE
+									);
+									
+			  // create a pushpin at this location, give it a label with 
+			  // the fire station name
+			  var pushpin = new Microsoft.Maps.Pushpin(
+							  location
+							  ,{} );
+							  
+			  //Store some metadata with the pushpin.
+              pushpin.metadata = {
+                description: 
+				  "<a href='" + education[i].WEBSITE + "' target='_blank'>" +
+				  education[i].NAME + "</a><br />" +
+				  education[i].ADDRESS + "<br />" +
+				  education[i].CATEGORY + "<br />" +
+				  education[i].COMMUNITY + "<br />" + 
+				  "<a href='#' onclick='return directions(" +
+				    education[i].LATITUDE + "," +
+				    education[i].LONGITUDE + ");" + "'>directions</a>"
+              };
+			
+			  Microsoft.Maps.Events.addHandler(pushpin, 'click', pushpinClicked);
+
+			  // add the pushpin to the map
+			  map.entities.push(pushpin);
+            }			  
+		    }
+		 }
+
+
+          function directions(tolat, tolng)
+          {
+		  
+		      console.log(tolat);
+ 
+ 		    directionsManager.clearAll();
+
+                //Create waypoints to route between.
+                var seattleWaypoint = 
+			      new Microsoft.Maps.Directions.Waypoint({ 
+				  
+				   location: new Microsoft.Maps.Location(lat, lng)
+				   
+				   });
+                directionsManager.addWaypoint(seattleWaypoint);
+
+                var workWaypoint = 
+			      new Microsoft.Maps.Directions.Waypoint({
+				  location: new Microsoft.Maps.Location(tolat, tolng) });
+                directionsManager.addWaypoint(workWaypoint);
+
+                //Specify the element in which the itinerary will be rendered.
+                directionsManager.setRenderOptions({ itineraryContainer: '#directionsItinerary' });
+
+                //Calculate directions.
+                directionsManager.calculateDirections();
+            
+		
+        }
+		
+		function selectedState ()
+		{
+			var chk = document.getElementById("selectpath").checked;
+			console.log(chk);
+			let count = 0;
+			if (chk == true){
+				
+					selectedLocations.push([e.location.latitude, e.location.longitude]);
+				
+			}
+		}
+		
+		
+        </script>
+		<script>
+		  function clearDirections()
+		  {
+		    directionsManager.clearAll();
+		  }
+		</script>
+    </body>
+</html>
